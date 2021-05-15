@@ -10,8 +10,8 @@ image=$1
 
 if [ "$image" == "" ]
 then
-    echo "Use image name vgg16"
-    image="vgg16"
+    echo "Use image name transformer"
+    image="transformer"
 fi
 
 # Get the account number associated with the current IAM credentials

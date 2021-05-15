@@ -28,7 +28,7 @@ ENV PATH="/opt/program:${PATH}"
 # SageMaker requirements
 ##########################################################################################
 ## install flask
-RUN pip install networkx==2.3 flask gevent gunicorn boto3
+RUN pip install networkx==2.3 flask gevent gunicorn boto3 tensorflow_datasets
 
 ### Install nginx notebook
 RUN apt-get -y update && apt-get install -y --no-install-recommends \
@@ -44,7 +44,6 @@ RUN ln -sf /dev/stderr /var/log/nginx/error.log
 # Set up the program in the image
 COPY * /opt/program/
 # COPY ./pretrained_model/* /opt/program/
-COPY ./clothes.h5 /opt/program/
 WORKDIR /opt/program
 
 ENTRYPOINT ["python", "serve.py"]

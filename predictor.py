@@ -5,6 +5,7 @@ import json
 import boto3
 import os
 import warnings
+import transformer
 
 warnings.filterwarnings("ignore",category=FutureWarning)
 
@@ -27,56 +28,8 @@ from tensorflow.keras import models
 from PIL import Image
 import numpy as np
 
-# dataset의 종류 리스트
-print(os.getcwd())
-model_cloth = models.load_model('./clothes.h5')
-model_color = models.load_model('./color.h5')
-
-def get_cloth(image):
-
-    # 이미지 resize
-    decode_img = io.BytesIO(image)
-    img = Image.open(decode_img)
-    img = img.convert("RGB")
-    img = img.resize((150,150))
-    data = np.asarray(img)
-
-    X = np.array(data)
-    X = X.astype("float") / 255
-    X = X.reshape(-1, 150, 150,3)
-
-    # 예측
-    pred = model_cloth.predict(X)  
-    result = np.argmax(pred)   # 예측 값중 가장 높은 클래스 반환
-    # cloth = cloth_list[result]    # 한글로 반환
-
-    return result
-
-def get_color(image):
-
-    # 이미지 resize
-    decode_img = io.BytesIO(image)
-    img = Image.open(decode_img)
-    img = img.convert("RGB")
-    img = img.resize((150,150))
-    data = np.asarray(img)
-
-    X = np.array(data)
-    X = X.astype("float") / 255
-    X = X.reshape(-1, 150, 150,3)
-
-    # 예측
-    pred = model_color.predict(X)  
-    result = np.argmax(pred)   # 예측 값중 가장 높은 클래스 반환
-    # color = color_list[result]    # 한글로 반환
-
-    return result
-
-
 # The flask app for serving predictions
 app = flask.Flask(__name__)
-
-s3 = boto3.client('s3')
 
 @app.route('/ping', methods=['GET'])
 def ping():
@@ -104,35 +57,23 @@ def invocations():
     data = flask.request.data.decode('utf-8')
     data = json.loads(data)
 
-    bucket = data['bucket']
-    image_uri = data['image_uri']
+    category = data['category']
+    color = data['color']
+    size = data['size']
+    washing = data['washing']
 
-    download_file_name = image_uri.split('/')[-1]
-    print ("<<<<download_file_name ", download_file_name)
-
-    print (image_uri)
-    file_obj = s3.get_object(Bucket=bucket, Key=image_uri)
-    file_obj = file_obj["Body"].read()
-    # s3_client.get_object(bucket, image_uri, download_file_name)
-    #local test
-    # download_file_name='./test_baji.jpg'
-    print('Download finished!')
-    # inference and send result to RDS and SQS
+    request_text = category + "," + color + "," + size + "," + washing
 
     print('Start to inference:')
 
-    #LOAD MODEL
-    model_cloth = './clothes.h5'
-    model_color = './color.h5'
+    # predict("레이어트뷔스티에 원피스,베이지,M,손세탁,드라이")
+    result_text = transformer.predict(request_text)
 
     #make inference
-    cloth = int(get_cloth(file_obj))
-    color = int(get_color(file_obj))
-    print("image_path:{},label:{},label2:{}".format(image_uri, cloth, color))
+    print("inferenced text:{}".format(result_text))
     print ("Done inference! ")
     inference_result = {
-        'cloth':cloth,
-        'color':color
+        'result_text':result_text
     }
     _payload = json.dumps(inference_result,ensure_ascii=False)
 
